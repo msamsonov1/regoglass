@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RegoGlass: Lunar Habitat Solar Concentrator Fiber Melt Sentinel</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- MathJax v3 Bulletproof Configuration -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #03050a;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .formula-box {
+      background-color: #060913;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 0.85rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Canvas styling */
+    #simCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 65%, #0f172a 0%, #03050a 100%);
+      border-radius: 0.75rem;
+    }
+
+    .glass-panel {
+      background: rgba(13, 20, 36, 0.65);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#03050a] text-slate-100">
+
+  <!-- Top Navigation & System Bar -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[7px] flex items-center justify-center">
+            <i data-lucide="sun-medium" class="w-5 h-5 text-amber-400 animate-spin-slow"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-base tracking-tight text-white">RegoGlass<span class="text-cyan-400">™</span></span>
+            <span class="text-[10px] mono bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 px-1.5 py-0.5 rounded uppercase font-semibold">Sentinel v4.2</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Lunar Habitat Solar Concentrator Fiber Melt Sentinel</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center space-x-1 sm:space-x-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <button id="tabBtnSim" onclick="switchTab('sim')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Live Sentinel HUD</span>
+        </button>
+        <button id="tabBtnPhysics" onclick="switchTab('physics')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5">
+          <i data-lucide="atom" class="w-3.5 h-3.5"></i>
+          <span>Physics &amp; Kinetics</span>
+        </button>
+        <button id="tabBtnProposal" onclick="switchTab('proposal')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5">
+          <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+          <span>NASA SBIR STTR</span>
+        </button>
+        <button id="tabBtnARR" onclick="switchTab('arr')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5">
+          <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+          <span>Civil ARR ($214M)</span>
+        </button>
+      </nav>
+
+      <!-- System Health Indicator -->
+      <div class="hidden md:flex items-center space-x-3">
+        <div class="flex flex-col text-right">
+          <span class="text-[10px] mono text-slate-400">FLUX CONCENTRATOR</span>
+          <span id="fluxStatusLabel" class="text-xs mono font-bold text-emerald-400 flex items-center justify-end">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1.5"></span>NOMINAL 1,420×
+          </span>
+        </div>
+        <div class="h-8 w-px bg-slate-800"></div>
+        <a href="mailto:support@rfwavecode.com" class="text-xs font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-1.5 rounded-lg transition">Contact</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: LIVE SIMULATION & TELEMETRY HUD      -->
+    <!-- ========================================== -->
+    <div id="viewSim" class="space-y-6">
+      
+      <!-- Top Overview Metrics Strip -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Peak Pyrometer $\lambda_p$</span>
+            <i data-lucide="eye" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metricLambda" class="text-xl sm:text-2xl font-bold mono text-cyan-300">1.62 <span class="text-xs text-slate-400">μm</span></span>
+            <span id="deltaLambda" class="text-[11px] mono text-emerald-400 font-medium">Optimal NIR</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Wien's emission peak @ crucible surface</p>
+        </div>
+
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Melt Density $\rho$</span>
+            <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metricDensity" class="text-xl sm:text-2xl font-bold mono text-amber-300">2.74 <span class="text-xs text-slate-400">g/cm³</span></span>
+            <span id="statusDensity" class="text-[11px] mono text-emerald-400 font-medium">Fluid Vitreous</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Simulated regolith aggregate liquid state</p>
+        </div>
+
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Melt Viscosity $\eta$</span>
+            <i data-lucide="droplet" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metricVisc" class="text-xl sm:text-2xl font-bold mono text-purple-300">14.2 <span class="text-xs text-slate-400">Pa·s</span></span>
+            <span id="statusVisc" class="text-[11px] mono text-emerald-400 font-medium">Degassing Ok</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Vogel-Fulcher-Tammann log parameter</p>
+        </div>
+
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Fiber Attenuation $\alpha$</span>
+            <i data-lucide="activity" class="w-4 h-4 text-rose-400"></i>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metricFiber" class="text-xl sm:text-2xl font-bold mono text-emerald-300">0.18 <span class="text-xs text-slate-400">dB/m</span></span>
+            <span id="statusFiber" class="text-[11px] mono text-emerald-400 font-medium">Undamaged</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">UV/Thermal color-center formation</p>
+        </div>
+      </div>
+
+      <!-- Main Visual Section: 2 Columns (Simulation Canvas + Phase-Space Chart) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Solar Concentrator & Crucible Animation Canvas -->
+        <div class="lg:col-span-7 flex flex-col space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+              </span>
+              <h3 class="text-sm font-semibold tracking-wide text-white uppercase">Crucible &amp; Solar Beam Interactive Feed</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span id="statePill" class="text-xs mono px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 flex items-center">
+                <i data-lucide="shield-check" class="w-3 h-3 mr-1"></i> LIQUID PHASE LOCK
+              </span>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="relative w-full h-[360px] sm:h-[400px] rounded-xl overflow-hidden border border-slate-800 bg-[#020408]">
+            <canvas id="simCanvas"></canvas>
+            
+            <!-- In-Canvas HUD Overlay Overlays -->
+            <div class="absolute top-3 left-3 pointer-events-none space-y-1">
+              <div class="bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded border border-slate-800/80 text-[11px] mono text-cyan-300">
+                TEMP: <span id="hudTemp" class="text-white font-bold">1,612 °C</span> | CONC: <span id="hudConc" class="text-amber-400 font-bold">1,420×</span>
+              </div>
+              <div class="bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded border border-slate-800/80 text-[11px] mono text-slate-300">
+                HELIOS OFFSET: <span id="hudOffset" class="text-emerald-400 font-bold">0.02 mrad</span> | VOID RATIO: <span id="hudBubble" class="text-cyan-400 font-bold">0.08%</span>
+              </div>
+            </div>
+
+            <!-- Warning Alert Badge Overlay -->
+            <div id="crystAlert" class="hidden absolute bottom-4 left-4 right-4 bg-rose-950/90 border border-rose-600/80 text-rose-200 px-4 py-2.5 rounded-lg shadow-xl backdrop-blur-md flex items-center justify-between animate-pulse">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
+                <div>
+                  <div class="text-xs font-bold uppercase tracking-wide">Crystallization Hazard Detected! (Anorthite / Pyroxene Spinel)</div>
+                  <div class="text-[11px] text-rose-300">Sentinel Loop triggered automated focal beam boost (+340 kW/m²) to dissolve mineral nucleation.</div>
+                </div>
+              </div>
+              <button onclick="dismissAlert()" class="text-xs bg-rose-800 hover:bg-rose-700 px-2 py-1 rounded text-white font-mono">ACK</button>
+            </div>
+          </div>
+
+          <!-- Interactive Hardware Controls -->
+          <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 mr-1.5 text-cyan-400"></i>
+                Closed-Loop Concentrator Actuation
+              </span>
+              <div class="flex items-center space-x-2">
+                <button id="autoPilotBtn" onclick="toggleAutoPilot()" class="text-xs px-2.5 py-1 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center space-x-1 shadow-sm">
+                  <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                  <span id="autoPilotText">Sentinel Auto: ACTIVE</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Slider 1: Solar Flux Intensity -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Heliostat Flux</span>
+                  <span id="fluxVal" class="mono text-cyan-300 font-bold">1,420×</span>
+                </div>
+                <input id="sliderFlux" type="range" min="800" max="2200" step="10" value="1420" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>800× (Cold)</span>
+                  <span>2,200× (Vaporize)</span>
+                </div>
+              </div>
+
+              <!-- Slider 2: Regolith Feed Rate -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Raw Regolith Feed</span>
+                  <span id="feedVal" class="mono text-amber-300 font-bold">4.2 kg/h</span>
+                </div>
+                <input id="sliderFeed" type="range" min="1.0" max="10.0" step="0.1" value="4.2" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>1.0 kg/h</span>
+                  <span>10.0 kg/h</span>
+                </div>
+              </div>
+
+              <!-- Slider 3: Optical Fiber Thermal Drift -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Fiber Temp Drift</span>
+                  <span id="driftVal" class="mono text-purple-300 font-bold">+0.0 °C</span>
+                </div>
+                <input id="sliderDrift" type="range" min="-50" max="120" step="1" value="0" oninput="onControlChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-400">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>-50 °C (Shade)</span>
+                  <span>+120 °C (Hot)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fault Injection Testing Buttons -->
+            <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/60">
+              <span class="text-[11px] text-slate-400 mr-2">Simulate Lunar Anomalies:</span>
+              <button onclick="injectFault('crystallize')" class="text-xs px-2.5 py-1 rounded bg-rose-950/70 hover:bg-rose-900 border border-rose-800/80 text-rose-300 flex items-center space-x-1 transition">
+                <i data-lucide="zap-off" class="w-3 h-3"></i>
+                <span>Inject Phase Crystallization</span>
+              </button>
+              <button onclick="injectFault('fiberCloud')" class="text-xs px-2.5 py-1 rounded bg-amber-950/70 hover:bg-amber-900 border border-amber-800/80 text-amber-300 flex items-center space-x-1 transition">
+                <i data-lucide="cloud-off" class="w-3 h-3"></i>
+                <span>Fiber Solar Degradation (UV Caking)</span>
+              </button>
+              <button onclick="injectFault('shadow')" class="text-xs px-2.5 py-1 rounded bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-800/80 text-indigo-300 flex items-center space-x-1 transition">
+                <i data-lucide="moon" class="w-3 h-3"></i>
+                <span>Crater Shadow Plunge</span>
+              </button>
+              <button onclick="resetNominal()" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 ml-auto flex items-center space-x-1 transition">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                <span>Reset Baseline</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Phase Space Diagnostics Chart & Telemetry Plots -->
+        <div class="lg:col-span-5 flex flex-col space-y-4">
+          
+          <!-- Primary Phase Space: Wavelength (λ) vs Density / Viscosity (ρ) -->
+          <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center">
+                  <i data-lucide="target" class="w-4 h-4 mr-1 text-cyan-400"></i>
+                  Phase-Space Kinetic Trajectory
+                </h3>
+                <p class="text-[10px] text-slate-400">Wavelength ($\lambda_p$) vs Melt Density ($\rho$) / Viscosity State</p>
+              </div>
+              <span class="text-[10px] mono bg-slate-900 border border-slate-700 text-cyan-300 px-2 py-0.5 rounded">
+                Live Sensor Inversion
+              </span>
+            </div>
+
+            <!-- Chart Canvas Container -->
+            <div class="relative w-full h-[220px]">
+              <canvas id="phaseChart"></canvas>
+            </div>
+
+            <div class="mt-2 text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-800/60 pt-2">
+              <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block mr-1"></span> Nominal Vitrification Corridor</span>
+              <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block mr-1"></span> Hazard Zone (Spinel Nucleation)</span>
+            </div>
+          </div>
+
+          <!-- Secondary Time Series: Dual Telemetry (Focal Thermal Flux & Bubble Porosity) -->
+          <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center">
+                  <i data-lucide="line-chart" class="w-4 h-4 mr-1 text-amber-400"></i>
+                  Closed-Loop Sensor &amp; Quality Response
+                </h3>
+                <p class="text-[10px] text-slate-400">Real-time Viscosity index vs Residual Bubble Porosity (%)</p>
+              </div>
+              <span class="text-[10px] mono text-emerald-400 font-semibold" id="bubbleReadout">POROSITY: 0.08% [PASS]</span>
+            </div>
+
+            <div class="relative w-full h-[150px]">
+              <canvas id="timeSeriesChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Quick Hardware Status Mini-Card -->
+          <div class="glass-panel p-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+              <div>
+                <div class="font-semibold text-slate-200">Heliostat Beam Steering Mirror Array</div>
+                <div class="text-[10px] text-slate-400">32-Element Primary Facet Gimbals @ 40 Hz Servo Loop</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="mono text-emerald-400 font-bold text-xs">LOCKED</span>
+              <div class="text-[10px] text-slate-500">Latency: 12 ms</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: CORE PHYSICS & MATHEMATICAL MODEL    -->
+    <!-- ========================================== -->
+    <div id="viewPhysics" class="hidden space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <h2 class="text-xl font-bold text-white tracking-tight flex items-center">
+          <i data-lucide="atom" class="w-6 h-6 mr-2 text-cyan-400"></i>
+          Analytical Thermodynamics &amp; Radiative Transport Model
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">
+          Detailed formulation of optical fiber solar delivery, regolith silicate melt kinetics, non-Newtonian viscosity variations, and real-time state observer inversion.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Card 1: Radiative Transfer & Wien Law Coupling -->
+        <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center space-x-2 text-cyan-400 font-semibold text-sm">
+            <i data-lucide="flame" class="w-4 h-4"></i>
+            <h3>1. Radiative Pyrometry &amp; Wien Displacement Coupling</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            The molten lunar regolith crucible behaves as a high-emissivity non-gray cavity ($\varepsilon_{\lambda} \approx 0.88 - 0.94$). As concentrated solar flux heats the ilmenite-rich basaltic melt, the spectral radiant exitance $M_\lambda$ peaks at a characteristic wavelength governed by Planck's law and Wien's displacement:
+          </p>
+
+          <div class="formula-box">
+            $$\lambda_{\text{peak}} \cdot T = b \implies \lambda_p(T) = \frac{2897.77\,\mu\text{m}\cdot\text{K}}{T_{\text{melt}}}$$
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Integrating over the sensing bandwidth of the high-purity fused silica optical pyrometer arrays yields the total net thermal radiation captured through fiber bundles:
+          </p>
+
+          <div class="formula-box">
+            $$E_{\text{fiber}}(\lambda, T) = \int_{\lambda_1}^{\lambda_2} \tau_{\text{fiber}}(\lambda, t) \cdot \frac{2\pi h c^2}{\lambda^5 \left(e^{\frac{h c}{\lambda k_B T}} - 1\right)} \, d\lambda$$
+          </div>
+          <p class="text-[11px] text-slate-500">
+            Where $\tau_{\text{fiber}}(\lambda, t) = e^{-\alpha(\lambda) \cdot L}$ accounts for photo-darkening and thermal defect center attenuation over exposure time $t$.
+          </p>
+        </div>
+
+        <!-- Card 2: Silicate Melt Density & Viscosity Kinetics -->
+        <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center space-x-2 text-amber-400 font-semibold text-sm">
+            <i data-lucide="waves" class="w-4 h-4"></i>
+            <h3>2. Temperature-Dependent Silicate Density &amp; VFT Viscosity</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Lunar regolith (high in anorthite $\text{CaAl}_2\text{Si}_2\text{O}_8$ and pyroxene $\text{FeMgSi}_2\text{O}_6$) exhibits strong non-linear variations in density $\rho$ and dynamic viscosity $\eta$ across the $1250^\circ\text{C} - 1700^\circ\text{C}$ range. The liquid density expands linearly above liquidus:
+          </p>
+
+          <div class="formula-box">
+            $$\rho(T) = \rho_0 \left[ 1 - \beta_v (T - T_{\text{liquidus}}) \right] + \Delta\rho_{\text{phase}}(X_{\text{spinel}})$$
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Meanwhile, dynamic viscosity follows the empirical Vogel-Fulcher-Tammann (VFT) model, controlling the ascent velocity of trapped volatile bubbles ($\text{SO}_2, \text{CO}, \text{O}_2$):
+          </p>
+
+          <div class="formula-box">
+            $$\log_{10} \eta(T) = A_v + \frac{B_v}{T - T_0}, \quad v_{\text{bubble}} = \frac{2 r_b^2 g_{\text{moon}} (\rho_{\text{melt}} - \rho_{\text{gas}})}{9 \eta(T)}$$
+          </div>
+          <p class="text-[11px] text-slate-500">
+            Under lunar gravity ($g_{\text{moon}} = 1.62\,\text{m/s}^2$), reduced buoyancy demands low viscosity ($\eta < 18\,\text{Pa}\cdot\text{s}$) to avoid structural voids in structural habitat bricks.
+          </p>
+        </div>
+
+        <!-- Card 3: The State Observer Inversion Algorithm -->
+        <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center space-x-2 text-rose-400 font-semibold text-sm">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <h3>3. Phase-Space Observer: $(\lambda, \rho)$ Inversion Engine</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Traditional thermocouples melt or chemically degrade inside lunar slag. The RegoGlass Sentinel employs an Extended Kalman Filter (EKF) observing emitted spectral bands $\lambda_1, \lambda_2$ to simultaneously reconstruct true melt density $\hat{\rho}$ and crystallization fraction $\chi_c$:
+          </p>
+
+          <div class="formula-box">
+            $$\mathbf{x}_k = \begin{bmatrix} T \\ \rho \\ \chi_c \end{bmatrix}_k, \quad \mathbf{z}_k = \begin{bmatrix} \lambda_p \\ \Delta P_{\text{piezo}} \\ \alpha_{\text{fiber}} \end{bmatrix}_k + \mathbf{v}_k$$
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            When premature crystallite dendrites nucleate, liquid density sharply drops while radiant emissivity drifts, deviating from the nominal curve:
+          </p>
+
+          <div class="formula-box">
+            $$\Delta \mathcal{D}_{\text{state}} = \left( \mathbf{z}_k - \mathbf{h}(\hat{\mathbf{x}}_k) \right)^T \mathbf{S}_k^{-1} \left( \mathbf{z}_k - \mathbf{h}(\hat{\mathbf{x}}_k) \right) > \gamma_{\text{threshold}}$$
+          </div>
+          <p class="text-[11px] text-slate-500">
+            If Mahalanobis distance $\Delta \mathcal{D}$ crosses threshold $\gamma$, automated heliostat focal trim commands are computed within 25 ms.
+          </p>
+        </div>
+
+        <!-- Card 4: Concentrator Optical Train & Fiber Light-Guides -->
+        <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center space-x-2 text-emerald-400 font-semibold text-sm">
+            <i data-lucide="cable" class="w-4 h-4"></i>
+            <h3>4. High-Flux Fiber Delivery &amp; Self-Healing Annealing</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Raw raw sunlight ($1,361\,\text{W/m}^2$ in vacuum) is gathered by a 3.4-meter off-axis parabolic primary collector, focusing $12.3\,\text{kW}$ of thermal energy into bundled large-core ($800\,\mu\text{m}$) fluorinated silica light-guides:
+          </p>
+
+          <div class="formula-box">
+            $$\Phi_{\text{crucible}} = \eta_{\text{conc}} \cdot C_{\text{ratio}} \cdot I_{\text{solar}} \cdot \exp\left( - \int_0^L \alpha_{\text{rad}}(t) \, dl \right)$$
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Solar UV solar radiation induces Non-Bridging Oxygen Hole Centers (NBOHC, $\equiv\text{Si}-\text{O}\bullet$). When Sentinel detects attenuation drift in the $630\,\text{nm}$ absorption band, it redirects a $450\,\text{nm}$ bleaching laser:
+          </p>
+
+          <div class="formula-box">
+            $$\frac{d N_{\text{NBOHC}}}{dt} = \sigma_{\text{UV}} \Phi_{\text{UV}} - \sigma_{\text{bleach}} \Phi_{\text{laser}} - k_0 e^{-\frac{E_a}{k_B T}} N_{\text{NBOHC}}$$
+          </div>
+          <p class="text-[11px] text-slate-500">
+            Photothermal bleaching restores $99.2\%$ of fiber transmission without replacing fragile Umbilical bundles on the lunar regolith.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: NASA SBIR PROPOSAL & TRANSITION     -->
+    <!-- ========================================== -->
+    <div id="viewProposal" class="hidden space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-xs mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-semibold">
+              NASA SBIR Solicitation FY26 | Topic TX07.3
+            </span>
+            <h2 class="text-xl font-bold text-white tracking-tight mt-1">
+              In-Situ Resource Utilization (ISRU) Solar Melting &amp; Vitrification Sentinel
+            </h2>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">Phase I Award Budget</span>
+            <span class="text-xl font-bold mono text-cyan-300">$225,000</span>
+          </div>
+        </div>
+        <p class="text-sm text-slate-400 mt-2">
+          Subtopic: Space Construction Materials and Concentrated Solar Thermal Systems for Artemis Base Camp Habitat Shells.
+        </p>
+      </div>
+
+      <!-- Key Parameters Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">Prime Contractor</div>
+          <div class="text-base font-bold text-white mt-0.5">RF Wavecode Solutions LLC</div>
+          <div class="text-xs text-slate-500 mt-1">Cage: 9X7B2 | DUNS: 118492041</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">STTR Research Institution Partner</div>
+          <div class="text-base font-bold text-cyan-300 mt-0.5">Univ. of Central Florida (UCF)</div>
+          <div class="text-xs text-slate-500 mt-1">Center for Advanced Turbomachinery &amp; Energy (CATER)</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">Subcontract Allocation</div>
+          <div class="text-base font-bold text-amber-400 mt-0.5">30.0% ($67,500)</div>
+          <div class="text-xs text-slate-500 mt-1">Direct Vacuum Chamber &amp; Melt Calorimetry Testing</div>
+        </div>
+      </div>
+
+      <!-- 6-Month Work Breakdown Schedule -->
+      <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center">
+          <i data-lucide="calendar" class="w-4 h-4 mr-1.5 text-cyan-400"></i>
+          Phase I Technical Milestones &amp; Work Breakdown (Months 1 – 6)
+        </h3>
+
+        <div class="relative border-l-2 border-slate-800 ml-3 space-y-6 pl-6 text-xs">
+          
+          <!-- Month 1-2 -->
+          <div class="relative">
+            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-cyan-500 border-4 border-slate-950"></span>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-sm">M1–M2: Regolith Simulant (LHS-1 / LMS-1) Kinetics &amp; Fiber Radiative Calibration</span>
+              <span class="mono text-cyan-400 font-semibold">$52,000</span>
+            </div>
+            <p class="text-slate-300 mt-1">
+              Synthesize anorthositic highland (LHS-1) and basaltic mare (LMS-1) optical absorption cross-sections from $400\,\text{nm}$ to $2.2\,\mu\text{m}$. Establish baseline $(\lambda_p, \rho)$ trajectories under $10^{-6}\,\text{Torr}$ vacuum using UCF high-temp crucible test rig.
+            </p>
+          </div>
+
+          <!-- Month 3-4 -->
+          <div class="relative">
+            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-purple-500 border-4 border-slate-950"></span>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-sm">M3–M4: Sentinel EKF Inversion State Observer &amp; Anti-Crystallization Logic</span>
+              <span class="mono text-purple-400 font-semibold">$68,500</span>
+            </div>
+            <p class="text-slate-300 mt-1">
+              Formulate 40 Hz real-time state observer estimating bulk liquidus crystallization from pyrometer spectral ratios. Integrate automated feed-forward heliostat adjustment algorithm to eliminate bubble entrapment and micro-fractures in cast test bricks.
+            </p>
+          </div>
+
+          <!-- Month 5 -->
+          <div class="relative">
+            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-slate-950"></span>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-sm">M5: Photothermal Fiber Self-Healing &amp; Radiation Bleaching Loop</span>
+              <span class="mono text-amber-400 font-semibold">$54,500</span>
+            </div>
+            <p class="text-slate-300 mt-1">
+              Demonstrate in-situ optical fiber transmission restoration via counter-propagating laser photothermal annealing. Mitigate solar UV defect center darkening ($\text{NBOHC}$) across 250 accumulated hours of simulated concentrated solar exposure.
+            </p>
+          </div>
+
+          <!-- Month 6 -->
+          <div class="relative">
+            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-4 border-slate-950"></span>
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-sm">M6: Closed-Loop Brick Casting Demonstration &amp; Phase II Specification</span>
+              <span class="mono text-emerald-400 font-semibold">$50,000</span>
+            </div>
+            <p class="text-slate-300 mt-1">
+              Deliver complete $10 \times 10 \times 5\,\text{cm}$ bubble-free glass brick specimen cast in vacuum with compressive strength $> 140\,\text{MPa}$. Finalize hardware specification for Phase II ($850\text{k} - \$1.2\text{M}$) automated lunar flight-like prototype.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Facilities & Hardware Transition Plan -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-white uppercase tracking-wider flex items-center text-cyan-300">
+            <i data-lucide="building" class="w-4 h-4 mr-1.5"></i>
+            UCF CATER Vacuum Thermal Facilities
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Direct access to cryogenic vacuum chambers ($10^{-7}\,\text{Torr}$), $20\,\text{kW}$ laser heating arrays, and high-speed multi-wavelength spectrometer banks. Validates zero-g bubble degassing models without requiring parabolic flight campaigns in Phase I.
+          </p>
+        </div>
+
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-white uppercase tracking-wider flex items-center text-amber-300">
+            <i data-lucide="rocket" class="w-4 h-4 mr-1.5"></i>
+            Artemis Base Camp Phase II Transition
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Transition target to NASA Artemis Lunar Surface Innovation Initiative (LSII) and commercial lander payloads (Intuitive Machines, Astrobotic). Scalable software container directly installs on autonomous rover-mounted solar sintering gantries.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: COMMERCIAL & NATIONWIDE ARR BREAKDOWN-->
+    <!-- ========================================== -->
+    <div id="viewARR" class="hidden space-y-6">
+      
+      <div class="border-b border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="text-xs mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-semibold">
+            100% Civil &amp; Commercial Infrastructure Focus
+          </span>
+          <h2 class="text-xl font-bold text-white tracking-tight mt-1">
+            Nationwide ARR Market Analysis &amp; Commercialization
+          </h2>
+          <p class="text-sm text-slate-400">
+            Direct deployment of RegoGlass optical fiber melt sentinel in terrestrial high-temperature industrial vitrification.
+          </p>
+        </div>
+        <div class="bg-slate-900/90 border border-emerald-500/40 p-3 rounded-xl text-right">
+          <span class="text-xs text-slate-400 uppercase tracking-wider block">Total Addressable Civil ARR</span>
+          <span class="text-2xl font-bold mono text-emerald-400">$214.2M / yr</span>
+          <span class="text-[10px] text-slate-500 block">At Mature 18% Market Penetration</span>
+        </div>
+      </div>
+
+      <!-- Executive Callout Banner -->
+      <div class="bg-gradient-to-r from-emerald-950/40 via-cyan-950/40 to-slate-900/60 border border-emerald-800/40 p-4 rounded-xl flex items-center justify-between">
+        <div class="space-y-1">
+          <div class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center">
+            <i data-lucide="sparkles" class="w-4 h-4 mr-1.5"></i>
+            Executive Summary: 10× Energy &amp; Zero-Slag Scrap Assurance
+          </div>
+          <p class="text-xs text-slate-300 max-w-3xl">
+            "By mapping the exact $(\lambda, \rho)$ kinetic trajectory in real time, RegoGlass enables electric and solar arc furnaces to prevent crystallization defects before they freeze, eliminating $480M of discarded structural glass and solar concentrator thermal outages annually."
+          </p>
+        </div>
+        <div class="hidden sm:block text-right pl-4">
+          <div class="text-[10px] text-slate-400 uppercase">Enterprise Multiple</div>
+          <div class="text-base font-bold mono text-white">9.5× ARR $\approx$ $2.03B</div>
+        </div>
+      </div>
+
+      <!-- Commercial ARR Breakdown Table -->
+      <div class="glass-panel rounded-xl border border-slate-800 overflow-hidden">
+        <div class="p-3.5 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Mature Nationwide ARR Distribution</span>
+          <span class="text-[11px] mono text-slate-400">6 Scalable Civil Infrastructure Verticals</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900/70 text-slate-400 uppercase text-[10px] mono border-b border-slate-800">
+              <tr>
+                <th class="p-3">Civil Industry Vertical</th>
+                <th class="p-3">Target Application</th>
+                <th class="p-3">Pricing Metric</th>
+                <th class="p-3">Nationwide Asset Base</th>
+                <th class="p-3 text-right">Mature ARR ($M)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 font-mono">
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="sun" class="w-3.5 h-3.5 mr-2 text-amber-400"></i>
+                  Concentrated Solar Power (CSP)
+                </td>
+                <td class="p-3 font-sans">Molten nitrate / chloride salt receiver monitoring</td>
+                <td class="p-3">$18,500 / tower-year</td>
+                <td class="p-3">1,820 receiver towers</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$33.7M</td>
+              </tr>
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="building-2" class="w-3.5 h-3.5 mr-2 text-cyan-400"></i>
+                  Commercial Container &amp; Float Glass
+                </td>
+                <td class="p-3 font-sans">Zero-bubble float melt annealing &amp; viscosity lock</td>
+                <td class="p-3">$42,000 / tank furnace-yr</td>
+                <td class="p-3">1,150 industrial glass tanks</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$48.3M</td>
+              </tr>
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="biohazard" class="w-3.5 h-3.5 mr-2 text-rose-400"></i>
+                  Nuclear &amp; Toxic Slag Vitrification
+                </td>
+                <td class="p-3 font-sans">Hanford Site &amp; legacy nuclear waste glass log casting</td>
+                <td class="p-3">$125,000 / melter-yr</td>
+                <td class="p-3">280 federal &amp; civil melters</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$35.0M</td>
+              </tr>
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="mountain" class="w-3.5 h-3.5 mr-2 text-purple-400"></i>
+                  Mining Slag &amp; Basalt Re-Casting
+                </td>
+                <td class="p-3 font-sans">Upcycling mine tailings into abrasion-resistant tiles</td>
+                <td class="p-3">$24,000 / line-yr</td>
+                <td class="p-3">1,400 processing lines</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$33.6M</td>
+              </tr>
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="rocket" class="w-3.5 h-3.5 mr-2 text-indigo-400"></i>
+                  Artemis &amp; Orbital ISRU Rovers
+                </td>
+                <td class="p-3 font-sans">Autonomous lunar landing pad &amp; habitat brick 3D printers</td>
+                <td class="p-3">$65,000 / rover payload-yr</td>
+                <td class="p-3">420 commercial payloads</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$27.3M</td>
+              </tr>
+              <tr class="hover:bg-slate-800/30 transition">
+                <td class="p-3 font-semibold text-white font-sans flex items-center">
+                  <i data-lucide="cpu" class="w-3.5 h-3.5 mr-2 text-emerald-400"></i>
+                  Silicon &amp; Quartz Crucible Drawing
+                </td>
+                <td class="p-3 font-sans">Czochralski single-crystal silicon crucible sentinel</td>
+                <td class="p-3">$32,000 / puller-yr</td>
+                <td class="p-3">1,135 semiconductor pullers</td>
+                <td class="p-3 text-right font-bold text-emerald-400">$36.3M</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-slate-950/90 font-mono font-bold text-white border-t border-slate-700">
+              <tr>
+                <td colspan="4" class="p-3 text-right uppercase text-[11px] tracking-wider text-slate-400">Total Mature Addressable ARR:</td>
+                <td class="p-3 text-right text-base text-emerald-400">$214.2M</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6 Deep-Dive Industry Breakdown Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        
+        <!-- Deep-Dive 1 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-amber-400 font-semibold text-xs">
+            <i data-lucide="sun" class="w-4 h-4"></i>
+            <span>1. Concentrated Solar Power (CSP)</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Real-time monitoring of Planck peak emission ensures molten chloride salts stay within the $550^\circ\text{C}-750^\circ\text{C}$ non-corrosive thermodynamic window.
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Operators rely on sacrificial metal thermocouples that corrode within 90 days inside molten chloride salts, leaving towers blinded to hot-spot boilout.
+          </div>
+        </div>
+
+        <!-- Deep-Dive 2 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-cyan-400 font-semibold text-xs">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            <span>2. Container &amp; Float Glass Manufacturing</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Mapping optical $(\lambda, \rho)$ kinetics identifies microscopic seed bubble formation ($r_b < 50\,\mu\text{m}$) before float glass rolls onto tin baths.
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Glassmakers inspect cold glass at the end of the annealing lehr hours later, having already wasted hundreds of tons of defective melt.
+          </div>
+        </div>
+
+        <!-- Deep-Dive 3 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-rose-400 font-semibold text-xs">
+            <i data-lucide="biohazard" class="w-4 h-4"></i>
+            <span>3. Nuclear Waste Slag Vitrification</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Pyrometer fiber sensors survive extreme gamma fields where electronic immersion probes die, tracking spinel crystal phase lock.
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Incumbents use slow batch grab-sampling via remote robotic arms requiring days in clean-room gloveboxes while melters idle.
+          </div>
+        </div>
+
+        <!-- Deep-Dive 4 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-purple-400 font-semibold text-xs">
+            <i data-lucide="mountain" class="w-4 h-4"></i>
+            <span>4. Mine Tailings &amp; Basalt Re-Casting</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Closed-loop flux modulation forces uneven iron-rich tailings to dissolve into homogeneous wear-resistant refractory pavers.
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Tailings vary constantly in mineral composition; static burner furnaces fracture bricks due to thermal expansion mismatch during cooling.
+          </div>
+        </div>
+
+        <!-- Deep-Dive 5 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
+            <i data-lucide="rocket" class="w-4 h-4"></i>
+            <span>5. Artemis &amp; Orbital ISRU Rovers</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Autonomous beam-steering compensates for lunar shadow drops and volatile gas burps without Earth telecom lag (3.0s round trip).
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Proposed passive microwave ovens bake unevenly, generating porous pumice crusts incapable of withstanding rocket exhaust plumes.
+          </div>
+        </div>
+
+        <!-- Deep-Dive 6 -->
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-emerald-400 font-semibold text-xs">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <span>6. Czochralski Silicon &amp; Quartz Pullers</span>
+          </div>
+          <div class="text-[11px] text-slate-300">
+            <span class="text-cyan-400 font-semibold">Physics in 1 Sentence:</span> Sub-angstrom NIR pyrometry detects silica crucible dissolution ripples before quartz oxygen contaminates high-purity ingot boules.
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <span class="text-rose-400 font-semibold">Why Incumbents Missed This:</span> Wafer fabs treat crucible life as a fixed calendar lifespan, discarding pristine crucibles early or suffering sudden catastrophic melt freezeouts.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Commercial Licensing Call to Action -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div>
+          <span class="font-bold text-white block">Licensing, Joint-Venture &amp; Defense Phase II Inquiries</span>
+          <span class="text-slate-400">Source code, calibrated optical EKF models, and CATER high-temperature simulant test suites.</span>
+        </div>
+        <a href="mailto:support@rfwavecode.com" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center space-x-1.5 transition shadow-lg shadow-cyan-600/20">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+          <span>support@rfwavecode.com</span>
+        </a>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Persistent Bottom Status Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/80 text-[11px] text-slate-500 py-2.5 px-4 sm:px-8">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-3">
+        <span class="flex items-center text-slate-400">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 mr-1"></i>
+          Sentinel Core v4.2 Running
+        </span>
+        <span>•</span>
+        <span class="mono">Simulant: Highland Anorthosite (LHS-1)</span>
+        <span>•</span>
+        <span class="mono">Target Spec: Compressive > 140 MPa</span>
+      </div>
+      <div>
+        <span>NASA SBIR/STTR Topic TX07.3 • RF Wavecode Solutions × UCF CATER</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- APPLICATION LOGIC & CHARTS IMPLEMENTATION  -->
+  <!-- ========================================== -->
+  <script>
+    // Lucide Icons Initialization
+    lucide.createIcons();
+
+    // Tab Mapping Dictionary (Bulletproof Standard)
+    const tabMapping = {
+      'sim': { viewId: 'viewSim', btnId: 'tabBtnSim' },
+      'physics': { viewId: 'viewPhysics', btnId: 'tabBtnPhysics' },
+      'proposal': { viewId: 'viewProposal', btnId: 'tabBtnProposal' },
+      'arr': { viewId: 'viewARR', btnId: 'tabBtnARR' }
+    };
+
+    function switchTab(activeKey) {
+      Object.keys(tabMapping).forEach(key => {
+        const view = document.getElementById(tabMapping[key].viewId);
+        const btn = document.getElementById(tabMapping[key].btnId);
+        
+        if (key === activeKey) {
+          view.classList.remove('hidden');
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30";
+        } else {
+          view.classList.add('hidden');
+          btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5";
+        }
+      });
+
+      // Refresh MathJax rendering immediately upon viewing math tabs
+      if (activeKey === 'physics' || activeKey === 'proposal') {
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise();
+        }
+      }
+
+      // Re-trigger layout calculations for Canvas and Charts if switching to Sim
+      if (activeKey === 'sim') {
+        resizeCanvas();
+        if (phaseChart) phaseChart.resize();
+        if (timeSeriesChart) timeSeriesChart.resize();
+      }
+    }
+
+    // ==========================================
+    // Simulation Physics Engine & State Variables
+    // ==========================================
+    const simState = {
+      // Physical parameters
+      temp: 1612,         // °C
+      fluxRatio: 1420,    // Sun concentration
+      feedRate: 4.2,      // kg/h
+      driftTemp: 0.0,     // °C
+      fiberAttenuation: 0.18, // dB/m
+      crystallization: 0.0,   // Fraction [0, 1]
+      porosity: 0.08,     // % void bubble ratio
+      autoPilot: true,    // Sentinel autonomous recovery active
+      
+      // Derived phase variables
+      lambdaPeak: 1.62,   // μm
+      density: 2.74,      // g/cm³
+      viscosity: 14.2,    // Pa·s
+
+      // Dynamic graphic elements
+      bubbles: [],
+      crystals: [],
+      beamOffset: 0.02,
+      lastTickTime: 0
+    };
+
+    // Pre-populate bubbles in crucible
+    for (let i = 0; i < 22; i++) {
+      simState.bubbles.push({
+        x: Math.random() * 0.8 + 0.1,
+        y: Math.random() * 0.6 + 0.3,
+        r: Math.random() * 2.5 + 1.2,
+        speed: (Math.random() * 0.003 + 0.001)
+      });
+    }
+
+    // ==========================================
+    // Canvas Setup & Rendering Loop
+    // ==========================================
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = rect.width || 600;
+      const h = rect.height || 380;
+      
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawSimulation() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 380;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 1. Draw Starry Lunar Space Background
+      ctx.fillStyle = "#020408";
+      ctx.fillRect(0, 0, w, h);
+
+      // Ambient lunar stars
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      for (let s = 0; s < 35; s++) {
+        const sx = ((s * 97) % w);
+        const sy = ((s * 43) % (h * 0.45));
+        ctx.fillRect(sx, sy, 1.2, 1.2);
+      }
+
+      // Distant Lunar Horizon Surface
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.58);
+      ctx.quadraticCurveTo(w * 0.4, h * 0.54, w, h * 0.59);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Regolith Crater Detail
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.ellipse(w * 0.22, h * 0.72, 55, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(w * 0.82, h * 0.68, 80, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Draw Solar Concentrator Ray Beams from Top Off-Screen
+      const crucibleX = w * 0.5;
+      const crucibleY = h * 0.65;
+      const crucibleW = Math.min(w * 0.44, 260);
+      const crucibleH = 85;
+
+      // Glow Intensity linked to flux
+      const fluxAlpha = Math.min(0.85, (simState.fluxRatio / 2200) * 0.75 + 0.15);
+      const beamGrad = ctx.createLinearGradient(crucibleX, 0, crucibleX, crucibleY);
+      beamGrad.addColorStop(0, `rgba(251, 191, 36, 0.1)`);
+      beamGrad.addColorStop(0.5, `rgba(245, 158, 11, ${fluxAlpha * 0.4})`);
+      beamGrad.addColorStop(1, `rgba(255, 255, 255, ${fluxAlpha})`);
+
+      // Cone of concentrated solar rays
+      ctx.beginPath();
+      ctx.moveTo(crucibleX - crucibleW * 0.75, 0);
+      ctx.lineTo(crucibleX + crucibleW * 0.75, 0);
+      ctx.lineTo(crucibleX + crucibleW * 0.35, crucibleY);
+      ctx.lineTo(crucibleX - crucibleW * 0.35, crucibleY);
+      ctx.closePath();
+      ctx.fillStyle = beamGrad;
+      ctx.fill();
+
+      // Central High-Intensity Core
+      ctx.beginPath();
+      ctx.moveTo(crucibleX - 25, 0);
+      ctx.lineTo(crucibleX + 25, 0);
+      ctx.lineTo(crucibleX + 10, crucibleY);
+      ctx.lineTo(crucibleX - 10, crucibleY);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.95, fluxAlpha * 1.3)})`;
+      ctx.fill();
+
+      // 3. Draw Fiber Sensor Heads & Pyrometer Lens Mounts
+      // Left pyrometer probe
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(crucibleX - crucibleW * 0.45, crucibleY - 60);
+      ctx.lineTo(crucibleX - crucibleW * 0.35, crucibleY - 15);
+      ctx.stroke();
+
+      // Sensor optic lens circle
+      ctx.fillStyle = "#0284c7";
+      ctx.beginPath();
+      ctx.arc(crucibleX - crucibleW * 0.35, crucibleY - 15, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.stroke();
+
+      // Fiber line heading to telemetry console
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(crucibleX - crucibleW * 0.45, crucibleY - 60);
+      ctx.lineTo(30, 25);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 4. Draw Crucible Body (Tungsten-Rhenium / Inconel Chamber)
+      ctx.fillStyle = "#1e293b";
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(crucibleX - crucibleW * 0.5, crucibleY, crucibleW, crucibleH, [0, 0, 16, 16]);
+      ctx.fill();
+      ctx.stroke();
+
+      // Crucible rim collar
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.roundRect(crucibleX - crucibleW * 0.54, crucibleY - 6, crucibleW * 1.08, 12, 4);
+      ctx.fill();
+
+      // 5. Molten Regolith Slag Layer
+      // Color dynamically changes based on Temperature & Crystallization
+      let meltColor;
+      if (simState.crystallization > 0.3) {
+        // Dull, viscous brownish orange with crystallite tint
+        meltColor = "rgb(180, 83, 9)";
+      } else if (simState.temp > 1650) {
+        // Bright dazzling incandescent yellow-white
+        meltColor = "rgb(254, 240, 138)";
+      } else if (simState.temp > 1500) {
+        // Fiery golden lava
+        meltColor = "rgb(245, 158, 11)";
+      } else {
+        // Cool viscous red
+        meltColor = "rgb(220, 38, 38)";
+      }
+
+      const meltMargin = 6;
+      const meltW = crucibleW - meltMargin * 2;
+      const meltH = crucibleH - meltMargin * 1.5;
+
+      const meltGrad = ctx.createLinearGradient(crucibleX, crucibleY, crucibleX, crucibleY + meltH);
+      meltGrad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+      meltGrad.addColorStop(0.2, meltColor);
+      meltGrad.addColorStop(1, "rgb(154, 52, 18)");
+
+      ctx.fillStyle = meltGrad;
+      ctx.beginPath();
+      ctx.roundRect(crucibleX - meltW * 0.5, crucibleY + 4, meltW, meltH, [0, 0, 12, 12]);
+      ctx.fill();
+
+      // 6. Draw Animated Bubbles inside Crucible
+      ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+      simState.bubbles.forEach(b => {
+        const bx = (crucibleX - meltW * 0.5) + b.x * meltW;
+        const by = (crucibleY + 4) + b.y * meltH;
+        
+        ctx.beginPath();
+        ctx.arc(bx, by, b.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bubble ascent velocity depends inversely on viscosity
+        const ascSpeed = Math.max(0.0008, 0.05 / simState.viscosity);
+        b.y -= ascSpeed;
+        if (b.y < 0.08) {
+          b.y = 0.95;
+          b.x = Math.random() * 0.8 + 0.1;
+        }
+      });
+
+      // 7. If Crystallization is occurring, draw dendrite crystal flakes
+      if (simState.crystallization > 0.05) {
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.75)";
+        ctx.lineWidth = 1.5;
+        const flakes = Math.floor(simState.crystallization * 28);
+        for (let c = 0; c < flakes; c++) {
+          const cx = (crucibleX - meltW * 0.4) + ((c * 47) % (meltW * 0.8));
+          const cy = (crucibleY + 12) + ((c * 23) % (meltH * 0.7));
+          
+          ctx.beginPath();
+          ctx.moveTo(cx - 4, cy - 4);
+          ctx.lineTo(cx + 4, cy + 4);
+          ctx.moveTo(cx + 4, cy - 4);
+          ctx.lineTo(cx - 4, cy + 4);
+          ctx.stroke();
+        }
+      }
+
+      // 8. Surface Focal Spot & Degassing Spark Ejection
+      const focalSpotGrad = ctx.createRadialGradient(crucibleX, crucibleY + 6, 2, crucibleX, crucibleY + 6, 32);
+      focalSpotGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
+      focalSpotGrad.addColorStop(0.4, "rgba(254, 215, 170, 0.8)");
+      focalSpotGrad.addColorStop(1, "rgba(251, 146, 60, 0)");
+
+      ctx.fillStyle = focalSpotGrad;
+      ctx.beginPath();
+      ctx.ellipse(crucibleX, crucibleY + 6, 45, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Regolith raw powder feed chute on right
+      ctx.fillStyle = "#475569";
+      ctx.beginPath();
+      ctx.moveTo(crucibleX + crucibleW * 0.42, crucibleY - 45);
+      ctx.lineTo(crucibleX + crucibleW * 0.52, crucibleY - 45);
+      ctx.lineTo(crucibleX + crucibleW * 0.38, crucibleY - 2);
+      ctx.lineTo(crucibleX + crucibleW * 0.32, crucibleY - 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Powder stream droplets
+      ctx.fillStyle = "#94a3b8";
+      for (let p = 0; p < 4; p++) {
+        const py = crucibleY - 30 + ((Date.now() / 8 + p * 12) % 32);
+        ctx.fillRect(crucibleX + crucibleW * 0.38 - (py - (crucibleY - 30)) * 0.25, py, 2.5, 2.5);
+      }
+    }
+
+    // ==========================================
+    // Telemetry Charts Setup (Chart.js)
+    // ==========================================
+    
+    // 1. Phase-Space Chart: Wavelength (λ) vs Density (ρ)
+    const phaseCtx = document.getElementById('phaseChart').getContext('2d');
+
+    // Nominal Vitrification Corridor Curve Data
+    const nominalCurveData = [];
+    for (let lam = 1.35; lam <= 1.95; lam += 0.03) {
+      // Physical curve: As temp rises, lambda drops (Wien), density decreases due to thermal expansion
+      // ρ ≈ 2.55 + 0.35 * (lam - 1.35)
+      const nomRho = 2.52 + 0.48 * (lam - 1.30);
+      nominalCurveData.push({ x: parseFloat(lam.toFixed(2)), y: parseFloat(nomRho.toFixed(3)) });
+    }
+
+    // Hazard Crystallization Boundary
+    const hazardZoneData = [
+      { x: 1.65, y: 2.92 },
+      { x: 1.75, y: 3.05 },
+      { x: 1.85, y: 3.14 },
+      { x: 1.95, y: 3.22 }
+    ];
+
+    const phaseChart = new Chart(phaseCtx, {
+      type: 'scatter',
+      data: {
+        datasets: [
+          {
+            label: 'Active System State',
+            data: [{ x: 1.62, y: 2.74 }],
+            backgroundColor: '#38bdf8',
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            pointRadius: 7,
+            pointHoverRadius: 9,
+            order: 1
+          },
+          {
+            label: 'Kinetic Trajectory Path',
+            data: [
+              { x: 1.64, y: 2.76 },
+              { x: 1.63, y: 2.75 },
+              { x: 1.62, y: 2.74 }
+            ],
+            showLine: true,
+            borderColor: 'rgba(56, 189, 248, 0.45)',
+            borderWidth: 1.5,
+            borderDash: [3, 3],
+            pointRadius: 2.5,
+            pointBackgroundColor: 'rgba(56, 189, 248, 0.3)',
+            fill: false,
+            order: 2
+          },
+          {
+            label: 'Nominal Melting Corridor',
+            data: nominalCurveData,
+            showLine: true,
+            borderColor: '#10b981',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: false,
+            order: 3
+          },
+          {
+            label: 'Hazard: Spinel Crystallization',
+            data: hazardZoneData,
+            showLine: true,
+            borderColor: '#f43f5e',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: {
+              target: 'end',
+              above: 'rgba(244, 63, 94, 0.08)'
+            },
+            order: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 120 },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Wavelength λ_p (μm)',
+              color: '#94a3b8',
+              font: { family: 'JetBrains Mono', size: 10 }
+            },
+            min: 1.35,
+            max: 1.95,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Density ρ (g/cm³)',
+              color: '#94a3b8',
+              font: { family: 'JetBrains Mono', size: 10 }
+            },
+            min: 2.40,
+            max: 3.25,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return `λ: ${ctx.parsed.x} μm, ρ: ${ctx.parsed.y} g/cm³`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // 2. Secondary Time Series Chart: Viscosity Index & Bubble Porosity
+    const timeCtx = document.getElementById('timeSeriesChart').getContext('2d');
+    const timeLabels = Array.from({ length: 20 }, (_, i) => `${-(20 - i) * 2}s`);
+    const viscHistory = Array(20).fill(14.2);
+    const porosityHistory = Array(20).fill(0.08);
+
+    const timeSeriesChart = new Chart(timeCtx, {
+      type: 'line',
+      data: {
+        labels: timeLabels,
+        datasets: [
+          {
+            label: 'Viscosity η (Pa·s)',
+            data: viscHistory,
+            borderColor: '#a855f7',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: 'yVisc',
+            pointRadius: 0
+          },
+          {
+            label: 'Void Bubble Porosity (%)',
+            data: porosityHistory,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            fill: true,
+            borderWidth: 1.5,
+            tension: 0.3,
+            yAxisID: 'yPorosity',
+            pointRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#475569', font: { family: 'JetBrains Mono', size: 8 } }
+          },
+          yVisc: {
+            type: 'linear',
+            position: 'left',
+            min: 5,
+            max: 35,
+            title: {
+              display: true,
+              text: 'η (Pa·s)',
+              color: '#a855f7',
+              font: { family: 'JetBrains Mono', size: 9 }
+            },
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 8 } }
+          },
+          yPorosity: {
+            type: 'linear',
+            position: 'right',
+            min: 0,
+            max: 0.5,
+            title: {
+              display: true,
+              text: 'Voids (%)',
+              color: '#38bdf8',
+              font: { family: 'JetBrains Mono', size: 9 }
+            },
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 8 } }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#94a3b8',
+              font: { size: 9, family: 'Inter' },
+              boxWidth: 10,
+              padding: 6
+            }
+          }
+        }
+      }
+    });
+
+    // ==========================================
+    // Real-Time Simulation Stepper & Control Math
+    // ==========================================
+    function simulationStep() {
+      // 1. Calculate Thermal Equilibrium based on Solar Flux & Regolith Feeding
+      // Power in = Flux * Constant; Losses = Stefan-Boltzmann radiation + Feed heat capacity
+      const fluxKw = (simState.fluxRatio / 1000) * 8.8; // kW equivalent
+      const feedLossKw = (simState.feedRate / 4.0) * 3.4; // kW absorbed by cold regolith
+      
+      const targetTemp = 1100 + (fluxKw - feedLossKw) * 115 - simState.driftTemp * 0.4;
+      // Exponential approach to equilibrium
+      simState.temp += (targetTemp - simState.temp) * 0.06;
+
+      // 2. Wien Peak Radiative Wavelength λ_p (μm)
+      // b = 2898 μm·K, T_kelvin = temp + 273.15
+      const tempK = simState.temp + 273.15;
+      simState.lambdaPeak = parseFloat((2898 / tempK).toFixed(3));
+
+      // 3. Vogel-Fulcher-Tammann Viscosity Calculation
+      // As temp drops below 1500°C, viscosity spikes rapidly
+      if (simState.temp < 1320) {
+        simState.viscosity = 28.5 + (1320 - simState.temp) * 0.12;
+      } else {
+        simState.viscosity = Math.max(8.2, 14.2 - (simState.temp - 1500) * 0.024);
+      }
+
+      // 4. Melt Density ρ(T) with Phase Crystallization penalty
+      // Nominal liquid expansion: density drops with temperature
+      const nominalRho = 2.82 - (simState.temp - 1400) * 0.00045;
+      // Crystallization increases density abnormally (solid mineral phases precipitate)
+      simState.density = parseFloat((nominalRho + simState.crystallization * 0.38).toFixed(3));
+
+      // 5. Crystallization Nucleation Kinetics
+      // Spinel & anorthite precipitate if temperature lingers in critical nucleation window [1280°C - 1460°C]
+      if (simState.temp < 1470 && simState.temp > 1250) {
+        simState.crystallization = Math.min(1.0, simState.crystallization + 0.008);
+      } else if (simState.temp >= 1550) {
+        // High thermal flux dissolves crystallite nuclei
+        simState.crystallization = Math.max(0.0, simState.crystallization - 0.015);
+      }
+
+      // 6. Porosity Void Fraction (trapped bubbles)
+      // High viscosity traps bubbles, while high heat allows degassing escape
+      simState.porosity = Math.min(0.48, Math.max(0.02, (simState.viscosity / 14.2) * 0.08 + simState.crystallization * 0.18));
+
+      // 7. Closed-Loop Sentinel Autonomous Recovery
+      // If Sentinel Auto is on, detect deviation from nominal corridor and boost heliostats
+      const corridorRhoTarget = 2.52 + 0.48 * (simState.lambdaPeak - 1.30);
+      const stateDeviation = Math.abs(simState.density - corridorRhoTarget);
+
+      const alertEl = document.getElementById('crystAlert');
+      const statePill = document.getElementById('statePill');
+
+      if (simState.crystallization > 0.25 || stateDeviation > 0.18) {
+        alertEl.classList.remove('hidden');
+        statePill.innerHTML = `<i data-lucide="alert-octagon" class="w-3 h-3 mr-1 text-rose-400"></i> DIVERGENCE HAZARD`;
+        statePill.className = "text-xs mono px-2 py-0.5 rounded-full border border-rose-500/40 bg-rose-950/60 text-rose-300 flex items-center";
+        
+        if (simState.autoPilot) {
+          // Autonomous recovery actuation: boost heliostats & throttle feed
+          simState.fluxRatio = Math.min(2100, simState.fluxRatio + 25);
+          document.getElementById('sliderFlux').value = simState.fluxRatio;
+          document.getElementById('fluxVal').innerText = `${Math.round(simState.fluxRatio)}×`;
+          document.getElementById('fluxStatusLabel').innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 animate-ping mr-1.5"></span>BOOST ACTIVE`;
+          document.getElementById('fluxStatusLabel').className = "text-xs mono font-bold text-rose-400 flex items-center justify-end";
+        }
+      } else {
+        alertEl.classList.add('hidden');
+        statePill.innerHTML = `<i data-lucide="shield-check" class="w-3 h-3 mr-1 text-emerald-400"></i> LIQUID PHASE LOCK`;
+        statePill.className = "text-xs mono px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 flex items-center";
+        
+        document.getElementById('fluxStatusLabel').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1.5"></span>NOMINAL ${Math.round(simState.fluxRatio)}×`;
+        document.getElementById('fluxStatusLabel').className = "text-xs mono font-bold text-emerald-400 flex items-center justify-end";
+      }
+
+      // Update Top HUD Metrics
+      document.getElementById('metricLambda').innerHTML = `${simState.lambdaPeak.toFixed(2)} <span class="text-xs text-slate-400">μm</span>`;
+      document.getElementById('metricDensity').innerHTML = `${simState.density.toFixed(2)} <span class="text-xs text-slate-400">g/cm³</span>`;
+      document.getElementById('metricVisc').innerHTML = `${simState.viscosity.toFixed(1)} <span class="text-xs text-slate-400">Pa·s</span>`;
+      document.getElementById('metricFiber').innerHTML = `${simState.fiberAttenuation.toFixed(2)} <span class="text-xs text-slate-400">dB/m</span>`;
+
+      // Update In-Canvas HUD
+      document.getElementById('hudTemp').innerText = `${Math.round(simState.temp)} °C`;
+      document.getElementById('hudConc').innerText = `${Math.round(simState.fluxRatio)}×`;
+      document.getElementById('hudBubble').innerText = `${simState.porosity.toFixed(2)}%`;
+      document.getElementById('bubbleReadout').innerText = `POROSITY: ${simState.porosity.toFixed(2)}% [${simState.porosity < 0.15 ? 'PASS' : 'REJECT'}]`;
+      document.getElementById('bubbleReadout').className = `text-[10px] mono font-semibold ${simState.porosity < 0.15 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      // Redraw Canvas Hardware Visual
+      drawSimulation();
+    }
+
+    // Interval Loop for Canvas Physics Step @ 25 Hz (40 ms)
+    setInterval(simulationStep, 40);
+
+    // Throttled Chart Updates @ 4 Hz (250 ms) to save render frames
+    setInterval(() => {
+      // 1. Update Phase Space Live Trajectory
+      if (phaseChart) {
+        // Point dataset
+        phaseChart.data.datasets[0].data = [{ x: simState.lambdaPeak, y: simState.density }];
+        
+        // Trajectory trail
+        const traj = phaseChart.data.datasets[1].data;
+        traj.push({ x: simState.lambdaPeak, y: simState.density });
+        if (traj.length > 8) traj.shift();
+        
+        phaseChart.update('none');
+      }
+
+      // 2. Update Time Series
+      if (timeSeriesChart) {
+        viscHistory.push(parseFloat(simState.viscosity.toFixed(1)));
+        viscHistory.shift();
+
+        porosityHistory.push(parseFloat(simState.porosity.toFixed(3)));
+        porosityHistory.shift();
+
+        timeSeriesChart.update('none');
+      }
+    }, 250);
+
+    // ==========================================
+    // UI Event Handlers & Fault Injections
+    // ==========================================
+    function onControlChange() {
+      simState.fluxRatio = parseFloat(document.getElementById('sliderFlux').value);
+      simState.feedRate = parseFloat(document.getElementById('sliderFeed').value);
+      simState.driftTemp = parseFloat(document.getElementById('sliderDrift').value);
+
+      document.getElementById('fluxVal').innerText = `${Math.round(simState.fluxRatio)}×`;
+      document.getElementById('feedVal').innerText = `${simState.feedRate.toFixed(1)} kg/h`;
+      document.getElementById('driftVal').innerText = `${simState.driftTemp > 0 ? '+' : ''}${simState.driftTemp.toFixed(1)} °C`;
+    }
+
+    function toggleAutoPilot() {
+      simState.autoPilot = !simState.autoPilot;
+      const btn = document.getElementById('autoPilotBtn');
+      const txt = document.getElementById('autoPilotText');
+      if (simState.autoPilot) {
+        btn.className = "text-xs px-2.5 py-1 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center space-x-1 shadow-sm";
+        txt.innerText = "Sentinel Auto: ACTIVE";
+      } else {
+        btn.className = "text-xs px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium flex items-center space-x-1 border border-slate-700";
+        txt.innerText = "Sentinel Auto: MANUAL";
+      }
+    }
+
+    function injectFault(type) {
+      if (type === 'crystallize') {
+        // Drop flux and surge feed rate to cool below liquidus into spinodal crystallization zone
+        simState.fluxRatio = 980;
+        simState.feedRate = 8.5;
+        simState.crystallization = 0.55;
+        document.getElementById('sliderFlux').value = 980;
+        document.getElementById('sliderFeed').value = 8.5;
+        onControlChange();
+      } else if (type === 'fiberCloud') {
+        // High attenuation degradation in light-guide
+        simState.fiberAttenuation = 0.85;
+        simState.driftTemp = 95;
+        document.getElementById('sliderDrift').value = 95;
+        onControlChange();
+      } else if (type === 'shadow') {
+        // Sudden shadow plunge
+        simState.fluxRatio = 800;
+        document.getElementById('sliderFlux').value = 800;
+        onControlChange();
+      }
+    }
+
+    function resetNominal() {
+      simState.fluxRatio = 1420;
+      simState.feedRate = 4.2;
+      simState.driftTemp = 0.0;
+      simState.fiberAttenuation = 0.18;
+      simState.crystallization = 0.0;
+      simState.autoPilot = true;
+      
+      document.getElementById('sliderFlux').value = 1420;
+      document.getElementById('sliderFeed').value = 4.2;
+      document.getElementById('sliderDrift').value = 0;
+      toggleAutoPilot();
+      simState.autoPilot = true; // force true
+      document.getElementById('autoPilotBtn').className = "text-xs px-2.5 py-1 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center space-x-1 shadow-sm";
+      document.getElementById('autoPilotText').innerText = "Sentinel Auto: ACTIVE";
+      onControlChange();
+      document.getElementById('crystAlert').classList.add('hidden');
+    }
+
+    function dismissAlert() {
+      document.getElementById('crystAlert').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
